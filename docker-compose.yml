@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  llm-security:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+      - SNARK_ENABLED=true
+      - SNARK_PROVER_URL=http://snark-prover:5001/prove
+      - SNARK_VERIFY_URL=http://snark-prover:5001/verify
+      - SNARK_POLICY_ID=policy_v1
+      - CIRCUIT_DIR=/app/zk/build
+    depends_on:
+      - snark-prover
+    volumes:
+      - ./zk/build:/app/zk/build:ro
+
+  snark-prover:
+    build:
+      context: ./zk
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    environment:
+      - CIRCUIT_DIR=/app/build
+      - SNARKJS_PATH=/usr/local/bin/snarkjs
+    volumes:
+      - ./zk/build:/app/build:ro
+    depends_on:
+      - zk-builder
+
+  zk-builder:
+    build:
+      context: ./zk
+      dockerfile: Dockerfile.zk
+    volumes:
+      - ./zk/build:/app/build
+    profiles:
+      - build 
