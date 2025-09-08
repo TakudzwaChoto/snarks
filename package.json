@@ -1,0 +1,20 @@
+{
+  "name": "llm-security-zk",
+  "version": "1.0.0",
+  "description": "Zero-knowledge proof components for LLM security policy verification",
+  "scripts": {
+    "build": "./build_circom.sh",
+    "install-deps": "npm install -g circom snarkjs",
+    "test": "node test_circuit.js"
+  },
+  "dependencies": {
+    "circom": "^2.0.0",
+    "snarkjs": "^0.7.0"
+  },
+  "devDependencies": {
+    "circomlib": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

@@ -1,0 +1,36 @@
+FROM node:18-alpine
+
+# Install system dependencies
+RUN apk add --no-cache \
+    git \
+    python3 \
+    make \
+    g++ \
+    bash
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package.json ./
+COPY build_circom.sh ./
+COPY test_circuit.js ./
+
+# Install Node.js dependencies
+RUN npm install -g circom snarkjs
+RUN npm install
+
+# Make build script executable
+RUN chmod +x build_circom.sh
+
+# Copy Circom circuit
+COPY circom/ ./circom/
+
+# Build the circuit
+RUN ./build_circom.sh
+
+# Create a volume mount point for the build artifacts
+VOLUME /app/build
+
+# Default command
+CMD ["node", "test_circuit.js"]
