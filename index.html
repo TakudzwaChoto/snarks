@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🔐 Anti-Collusion System - LLM Secure Logger</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='common.css') }}">
+    <style>
+        /* Page-specific styles */
+        .chat-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+        }
+        
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--spacing-lg);
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+            max-height: 60vh;
+        }
+        
+        .bubble {
+            max-width: 80%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-lg);
+            font-size: var(--font-size-base);
+            line-height: 1.5;
+            word-break: break-word;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .user {
+            align-self: flex-end;
+            background: var(--primary-color);
+            color: var(--text-light);
+            border-bottom-right-radius: var(--radius-sm);
+        }
+        
+        .assistant {
+            align-self: flex-start;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border-bottom-left-radius: var(--radius-sm);
+        }
+        
+        .input-area {
+            display: flex;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-md) var(--spacing-lg);
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-primary);
+        }
+        
+        .model-selector {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
+            padding: var(--spacing-sm);
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+        }
+        
+        .security-toggle {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--border-secondary);
+            transition: var(--transition-fast);
+            border-radius: 24px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: var(--transition-fast);
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: var(--success-color);
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        .audit-info {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .audit-info h3 {
+            margin: 0 0 var(--spacing-sm) 0;
+            color: var(--text-primary);
+            font-size: var(--font-size-lg);
+        }
+        
+        .audit-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-md);
+        }
+        
+        .audit-item {
+            background: var(--bg-secondary);
+            padding: var(--spacing-sm);
+            border-radius: var(--radius-sm);
+            border-left: 3px solid var(--primary-color);
+        }
+        
+        .audit-label {
+            font-size: var(--font-size-xs);
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+        
+        .audit-value {
+            font-size: var(--font-size-base);
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Header -->
+    <div class="nav-header">
+        <a href="/" class="nav-brand">🔐 Anti-Collusion System</a>
+        <div class="nav-menu">
+            <a href="/" class="nav-link active">💬 Chat</a>
+            <a href="/logs" class="nav-link">📊 Logs</a>
+            <a href="/test_zkp" class="nav-link">🔒 ZKP Test</a>
+            {% if user %}
+                <div class="user-info">
+                    👤 {{ user }} ({{ role }})
+                    <a href="/logout" class="btn btn-sm btn-outline">🚪 Logout</a>
+                </div>
+            {% else %}
+                <a href="/login" class="btn btn-sm btn-primary">🔑 Login</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1>🔐 Anti-Collusion LLM Secure Logger</h1>
+            <p>Secure, audited, and tamper-resistant AI interactions</p>
+        </div>
+
+        <div class="page-content">
+            <!-- Model Selection and Security Controls -->
+            {% if user %}
+                <div class="model-selector">
+                    <label for="model-select" class="form-label">🤖 LLM Model:</label>
+                    <select id="model-select" class="form-input form-select" onchange="changeModel(this.value)">
+                        {% for model in available_models %}
+                            <option value="{{ model }}" {% if model == llm_model %}selected{% endif %}>{{ model }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="security-toggle">
+                    <label for="strict-mode" class="form-label">🛡️ Strict Security Mode:</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="strict-mode" {% if strict_mode %}checked{% endif %} onchange="toggleStrictMode(this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="form-label">Enhanced prompt injection detection</span>
+                </div>
+            {% endif %}
+
+            <!-- Audit Information Display -->
+            {% if audit_info %}
+                <div class="audit-info">
+                    <h3>🔍 Security Audit Results</h3>
+                    <div class="audit-grid">
+                        <div class="audit-item">
+                            <div class="audit-label">Log ID</div>
+                            <div class="audit-value">{{ audit_info.zkp_log_id[:8] }}...</div>
+                        </div>
+                        <div class="audit-item">
+                            <div class="audit-label">Risk Level</div>
+                            <div class="audit-value">{{ audit_info.risk_level.upper() }}</div>
+                        </div>
+                        <div class="audit-item">
+                            <div class="audit-label">Safety Score</div>
+                            <div class="audit-value">{{ "%.1f"|format(audit_info.zkp_safety_score) }}</div>
+                        </div>
+                        <div class="audit-item">
+                            <div class="audit-label">ZKP Valid</div>
+                            <div class="audit-value">{{ "✅" if audit_info.zkp_valid else "❌" }}</div>
+                        </div>
+                        <div class="audit-item">
+                            <div class="audit-label">Processing Time</div>
+                            <div class="audit-value">{{ "%.2f"|format(audit_info.timings_ms.zkp) }}ms</div>
+                        </div>
+                        <div class="audit-item">
+                            <div class="audit-label">Status</div>
+                            <div class="audit-value">{{ "🔒 Secured" if audit_info.zkp_valid else "⚠️ Flagged" }}</div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Chat History -->
+            <div class="chat-area" id="chat-area">
+                {% for message in chat_history %}
+                    <div class="bubble {{ message.role }}">
+                        <strong>{{ message.role.title() }}:</strong> {{ message.content }}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- Input Area -->
+            {% if user %}
+                <form method="POST" class="input-area">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <textarea 
+                        name="prompt" 
+                        placeholder="Enter your message here..." 
+                        class="form-input form-textarea"
+                        required
+                        autofocus
+                    ></textarea>
+                    <button type="submit" class="btn btn-primary">🚀 Send</button>
+                </form>
+            {% else %}
+                <div class="alert alert-info text-center">
+                    🔐 Please <a href="/login" class="btn btn-sm btn-primary">login</a> to start chatting securely
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    {% with messages = get_flashed_messages() %}
+        {% for message in messages %}
+            <div class="toast">{{ message }}</div>
+        {% endfor %}
+    {% endwith %}
+
+    <script>
+        // Auto-scroll chat to bottom
+        function scrollToBottom() {
+            const chatArea = document.getElementById('chat-area');
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+        
+        // Scroll on page load
+        window.addEventListener('load', scrollToBottom);
+        
+        // Model selection
+        function changeModel(model) {
+            fetch('/change_model', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+                },
+                body: JSON.stringify({ model: model })
+            }).then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      showToast(`✅ Model changed to ${model}`);
+                  }
+              });
+        }
+        
+        // Strict mode toggle
+        function toggleStrictMode(enabled) {
+            fetch('/toggle_strict_mode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+                },
+                body: JSON.stringify({ strict_mode: enabled })
+            }).then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      showToast(`🛡️ Strict mode ${enabled ? 'enabled' : 'disabled'}`);
+                  }
+              });
+        }
+        
+        // Toast notification
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                document.body.removeChild(toast);
+            }, 3000);
+        }
+        
+        // Form submission enhancement
+        document.querySelector('form')?.addEventListener('submit', function(e) {
+            const textarea = this.querySelector('textarea');
+            if (textarea.value.trim()) {
+                this.querySelector('button').disabled = true;
+                this.querySelector('button').textContent = '⏳ Processing...';
+            }
+        });
+    </script>
+</body>
+</html> 

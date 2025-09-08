@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🔑 Login - Anti-Collusion System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='common.css') }}">
+    <style>
+        /* Page-specific styles */
+        .login-container {
+            max-width: 400px;
+            margin: var(--spacing-xxl) auto 0 auto;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+        }
+        
+        .login-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+            color: var(--text-light);
+            padding: var(--spacing-xl);
+            text-align: center;
+        }
+        
+        .login-header h1 {
+            margin: 0;
+            font-size: var(--font-size-xxl);
+            font-weight: 300;
+        }
+        
+        .login-header p {
+            margin: var(--spacing-sm) 0 0 0;
+            opacity: 0.9;
+            font-size: var(--font-size-base);
+        }
+        
+        .login-form {
+            padding: var(--spacing-xl);
+        }
+        
+        .form-footer {
+            text-align: center;
+            margin-top: var(--spacing-lg);
+            padding-top: var(--spacing-lg);
+            border-top: 1px solid var(--border-primary);
+        }
+        
+        .form-footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+            transition: var(--transition-fast);
+        }
+        
+        .form-footer a:hover {
+            color: var(--primary-hover);
+            text-decoration: underline;
+        }
+        
+        .system-info {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            margin-top: var(--spacing-lg);
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+        
+        .system-info h4 {
+            margin: 0 0 var(--spacing-sm) 0;
+            color: var(--text-primary);
+            font-size: var(--font-size-base);
+        }
+        
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .feature-list li {
+            padding: var(--spacing-xs) 0;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .feature-list li::before {
+            content: "✅";
+            color: var(--success-color);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Header -->
+    <div class="nav-header">
+        <a href="/" class="nav-brand">🔐 Anti-Collusion System</a>
+        <div class="nav-menu">
+            <a href="/" class="nav-link">💬 Chat</a>
+            <a href="/logs" class="nav-link">📊 Logs</a>
+            <a href="/test_zkp" class="nav-link">🔒 ZKP Test</a>
+            <a href="/login" class="nav-link active">🔑 Login</a>
+        </div>
+    </div>
+
+    <div class="login-container">
+        <!-- Login Header -->
+        <div class="login-header">
+            <h1>🔑 Login</h1>
+            <p>Access the secure anti-collusion system</p>
+        </div>
+
+        <!-- Login Form -->
+        <div class="login-form">
+            <form method="POST" autocomplete="off">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                
+                <div class="form-group">
+                    <label for="username" class="form-label">👤 Username</label>
+                    <input type="text" id="username" name="username" class="form-input" required autofocus>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password" class="form-label">🔒 Password</label>
+                    <input type="password" id="password" name="password" class="form-input" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-full btn-lg">🚀 Login</button>
+            </form>
+
+            <div class="form-footer">
+                <a href="/">← Back to Chat</a>
+            </div>
+
+            <!-- System Information -->
+            <div class="system-info">
+                <h4>🛡️ System Features</h4>
+                <ul class="feature-list">
+                    <li>Multi-factor authentication</li>
+                    <li>Role-based access control</li>
+                    <li>Audit trail logging</li>
+                    <li>Tamper detection</li>
+                    <li>Real-time monitoring</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    {% with messages = get_flashed_messages() %}
+        {% for message in messages %}
+            {% if "Invalid username" in message or "Logged out" in message or "Please log in" in message %}
+                <div class="toast">{{ message }}</div>
+            {% endif %}
+        {% endfor %}
+    {% endwith %}
+
+    <script>
+        // Form enhancement
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '⏳ Authenticating...';
+        });
+        
+        // Auto-focus username field
+        document.getElementById('username').focus();
+    </script>
+</body>
+</html> 

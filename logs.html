@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>📊 Cryptographic Log Audit - Anti-Collusion System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='common.css') }}">
+    <style>
+        /* Page-specific styles */
+        .logs-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+        }
+        
+        .logs-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+            color: var(--text-light);
+            padding: var(--spacing-xl);
+            text-align: center;
+        }
+        
+        .logs-header h1 {
+            margin: 0;
+            font-size: var(--font-size-huge);
+            font-weight: 300;
+        }
+        
+        .logs-header p {
+            margin: var(--spacing-sm) 0 0 0;
+            opacity: 0.9;
+            font-size: var(--font-size-lg);
+        }
+        
+        .logs-content {
+            padding: var(--spacing-xl);
+        }
+        
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .stat-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            text-align: center;
+            transition: var(--transition-normal);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .stat-number {
+            font-size: var(--font-size-huge);
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .stat-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+        
+        .export-section {
+            margin-bottom: var(--spacing-lg);
+            text-align: center;
+        }
+        
+        .table-wrapper {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+        
+        .table-header {
+            background: var(--bg-tertiary);
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-bottom: 1px solid var(--border-primary);
+        }
+        
+        .table-header h3 {
+            margin: 0;
+            color: var(--text-primary);
+            font-size: var(--font-size-lg);
+        }
+        
+        .log-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--font-size-sm);
+        }
+        
+        .log-table th,
+        .log-table td {
+            padding: var(--spacing-sm) var(--spacing-md);
+            text-align: left;
+            border-bottom: 1px solid var(--border-primary);
+        }
+        
+        .log-table th {
+            background: var(--bg-tertiary);
+            font-weight: 600;
+            color: var(--text-primary);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .log-table tbody tr {
+            transition: var(--transition-fast);
+        }
+        
+        .log-table tbody tr:hover {
+            background: var(--bg-tertiary);
+        }
+        
+        .log-row.risk-low {
+            border-left: 4px solid var(--info-color);
+        }
+        
+        .log-row.risk-medium {
+            border-left: 4px solid var(--warning-color);
+        }
+        
+        .log-row.risk-high {
+            border-left: 4px solid var(--danger-color);
+        }
+        
+        .hash-cell {
+            font-family: 'Courier New', monospace;
+            font-size: var(--font-size-xs);
+            background: var(--bg-tertiary);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: var(--transition-fast);
+        }
+        
+        .hash-cell:hover {
+            background: var(--border-primary);
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: var(--spacing-xs);
+            flex-direction: column;
+        }
+        
+        .status-info {
+            font-size: var(--font-size-xs);
+            margin-top: var(--spacing-sm);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius-sm);
+            border: 1px solid;
+        }
+        
+        .status-info.signed {
+            background: var(--success-color);
+            color: var(--text-light);
+            border-color: var(--success-color);
+        }
+        
+        .status-info.pending {
+            background: var(--warning-color);
+            color: var(--text-dark);
+            border-color: var(--warning-color);
+        }
+        
+        .status-info.error {
+            background: var(--danger-color);
+            color: var(--text-light);
+            border-color: var(--danger-color);
+        }
+        
+        .prompt-preview {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+        
+        .prompt-preview:hover {
+            white-space: normal;
+            word-wrap: break-word;
+            color: var(--text-primary);
+        }
+        
+        .back-section {
+            text-align: center;
+            margin-top: var(--spacing-xl);
+            padding-top: var(--spacing-lg);
+            border-top: 1px solid var(--border-primary);
+        }
+        
+        .back-link {
+            color: var(--primary-color);
+            text-decoration: none;
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border: 2px solid var(--primary-color);
+            border-radius: var(--radius-md);
+            transition: var(--transition-fast);
+            display: inline-block;
+        }
+        
+        .back-link:hover {
+            background: var(--primary-color);
+            color: var(--text-light);
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Header -->
+    <div class="nav-header">
+        <a href="/" class="nav-brand">🔐 Anti-Collusion System</a>
+        <div class="nav-menu">
+            <a href="/" class="nav-link">💬 Chat</a>
+            <a href="/logs" class="nav-link active">📊 Logs</a>
+            <a href="/test_zkp" class="nav-link">🔒 ZKP Test</a>
+            {% if user %}
+                <div class="user-info">
+                    👤 {{ user }} ({{ role }})
+                    <a href="/logout" class="btn btn-sm btn-outline">🚪 Logout</a>
+                </div>
+            {% else %}
+                <a href="/login" class="btn btn-sm btn-primary">🔑 Login</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="logs-container">
+        <!-- Page Header -->
+        <div class="logs-header">
+            <h1>📊 Cryptographic Log Audit</h1>
+            <p>Real-time monitoring and verification of all system interactions</p>
+        </div>
+
+        <div class="logs-content">
+            <!-- Statistics Dashboard -->
+            <div class="stats-bar">
+                <div class="stat-card">
+                    <div class="stat-number" id="total-logs">-</div>
+                    <div class="stat-label">Total Logs</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="pending-logs">-</div>
+                    <div class="stat-label">Pending Review</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="finalized-logs">-</div>
+                    <div class="stat-label">Finalized</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="high-risk-logs">-</div>
+                    <div class="stat-label">High Risk</div>
+                </div>
+            </div>
+
+            <!-- Export Section -->
+            <div class="export-section">
+                <button class="btn btn-secondary btn-lg" onclick="exportTableToCSV('llm_logs_export.csv')">
+                    📊 Export as CSV
+                </button>
+            </div>
+
+            <!-- Logs Table -->
+            <div class="table-wrapper">
+                <div class="table-header">
+                    <h3>🔍 System Interaction Logs</h3>
+                </div>
+                
+                <div class="table-container">
+                    <table class="log-table" id="log-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Timestamp</th>
+                                <th>User</th>
+                                <th>Risk Level</th>
+                                <th>Prompt Preview</th>
+                                <th>Status</th>
+                                <th>Hash Chain</th>
+                                <th>Signature</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in logs %}
+                            <tr class="log-row risk-{{ log[8] if log|length > 8 else 'low' }}">
+                                <td><strong>{{ log[0] }}</strong></td>
+                                <td>{{ log[1][:19] if log[1] else 'N/A' }}</td>
+                                <td><span class="user-badge">{{ log[2] }}</span></td>
+                                <td>
+                                    <span class="badge risk-{{ log[8] if log|length > 8 else 'low' }}">
+                                        {{ (log[8] if log|length > 8 else 'low').upper() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="prompt-preview" title="{{ log[3] }}" onclick="showFullPrompt('{{ log[3] }}')">
+                                        {{ log[3][:50] if log[3] else 'N/A' }}...
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge status-{{ log[11] if log|length > 11 else 'finalized' }}">
+                                        {{ (log[11] if log|length > 11 else 'finalized').upper() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="hash-cell" title="Current Hash: {{ log[6] }}">
+                                        <strong>Current:</strong> {{ log[6][:16] }}...
+                                    </div>
+                                    <div class="hash-cell" title="Previous Hash: {{ log[5] or 'None' }}">
+                                        <strong>Prev:</strong> {{ (log[5][:16] + '...') if log[5] else 'None' }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="hash-cell" title="{{ log[7] }}">
+                                        {{ log[7][:16] }}...
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn btn-info btn-sm" onclick="checkLogStatus({{ log[0] }})">
+                                            📊 Status
+                                        </button>
+                                        <button class="btn btn-success btn-sm" onclick="signLog({{ log[0] }})">
+                                            ✍️ Sign
+                                        </button>
+                                    </div>
+                                    <div id="status-{{ log[0] }}" class="status-info"></div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Back Navigation -->
+            <div class="back-section">
+                <a href="/" class="back-link">← Back to Chat</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Update statistics on page load
+        function updateStats() {
+            const rows = document.querySelectorAll('#log-table tbody tr');
+            let total = rows.length;
+            let pending = 0;
+            let finalized = 0;
+            let highRisk = 0;
+            
+            rows.forEach(row => {
+                const status = row.querySelector('.badge')?.textContent?.toLowerCase();
+                const risk = row.querySelector('.badge.risk-high, .badge.risk-medium, .badge.risk-low')?.textContent?.toLowerCase();
+                
+                if (status === 'pending') pending++;
+                if (status === 'finalized') finalized++;
+                if (risk === 'high') highRisk++;
+            });
+            
+            document.getElementById('total-logs').textContent = total;
+            document.getElementById('pending-logs').textContent = pending;
+            document.getElementById('finalized-logs').textContent = finalized;
+            document.getElementById('high-risk-logs').textContent = highRisk;
+        }
+        
+        function showFullPrompt(promptHash) {
+            alert('Prompt Hash (Encrypted):\n' + promptHash + '\n\nNote: This is the encrypted hash. In a real system, you would decrypt this to see the actual prompt.');
+        }
+        
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text);
+            showToast('✅ Copied to clipboard!');
+        }
+        
+        function exportTableToCSV(filename) {
+            var csv = [];
+            var rows = document.querySelectorAll("#log-table tr");
+            for (var i = 0; i < rows.length; i++) {
+                var row = [], cols = rows[i].querySelectorAll("td, th");
+                for (var j = 0; j < cols.length; j++) {
+                    var text = cols[j].innerText.replace(/"/g, '""');
+                    row.push('"' + text + '"');
+                }
+                csv.push(row.join(","));
+            }
+            var csvFile = new Blob([csv.join("\n")], {type: "text/csv"});
+            var downloadLink = document.createElement("a");
+            downloadLink.download = filename;
+            downloadLink.href = window.URL.createObjectURL(csvFile);
+            downloadLink.style.display = "none";
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            showToast('📊 CSV exported successfully!');
+        }
+        
+        async function checkLogStatus(logId) {
+            try {
+                const response = await fetch(`/log_status/${logId}`);
+                const statusData = await response.json();
+                
+                const statusDiv = document.getElementById(`status-${logId}`);
+                if (response.ok) {
+                    let statusClass = 'pending';
+                    let statusText = '⏳ Pending Review';
+                    
+                    if (statusData.status === 'finalized') {
+                        statusClass = 'signed';
+                        statusText = '✅ Finalized';
+                    } else if (statusData.signatures && statusData.signatures.length > 0) {
+                        statusClass = 'signed';
+                        statusText = `✍️ Signed by ${statusData.signatures.map(s => s.admin).join(', ')}`;
+                    }
+                    
+                    statusDiv.className = `status-info ${statusClass}`;
+                    statusDiv.innerHTML = `
+                        <strong>Status:</strong> ${statusText}<br>
+                        <strong>Signatures:</strong> ${statusData.signatures ? statusData.signatures.length : 0}<br>
+                        <strong>Required:</strong> ${statusData.quorum_required || 1}<br>
+                        <strong>Risk Level:</strong> ${statusData.risk_level || 'low'}<br>
+                        ${statusData.time_lock_until ? `<strong>Time Lock:</strong> ${statusData.time_lock_until}<br>` : ''}
+                    `;
+                } else {
+                    statusDiv.className = 'status-info error';
+                    statusDiv.textContent = `❌ Error: ${statusData.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                const statusDiv = document.getElementById(`status-${logId}`);
+                statusDiv.className = 'status-info error';
+                statusDiv.textContent = `❌ Error: ${error.message}`;
+            }
+        }
+        
+        async function signLog(logId) {
+            try {
+                const formData = new FormData();
+                formData.append('log_id', logId);
+                
+                const response = await fetch('/log_sign', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    showToast(`✅ Log ${logId} signed successfully by ${result.admin}`);
+                    // Refresh status
+                    checkLogStatus(logId);
+                } else {
+                    showToast(`❌ Error signing log: ${result.error}`);
+                }
+            } catch (error) {
+                showToast(`❌ Error signing log: ${error.message}`);
+            }
+        }
+        
+        // Toast notification
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                document.body.removeChild(toast);
+            }, 3000);
+        }
+        
+        // Auto-check status for all logs on page load
+        window.addEventListener('load', function() {
+            updateStats();
+            const logRows = document.querySelectorAll('#log-table tbody tr');
+            logRows.forEach((row, index) => {
+                const logId = row.cells[0].textContent;
+                if (logId) {
+                    setTimeout(() => checkLogStatus(parseInt(logId)), index * 100); // Stagger requests
+                }
+            });
+        });
+    </script>
+</body>
+</html> 
